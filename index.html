@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rick and Morty Character Database</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ae079a;
+            --secondary-color: #b0ed5b;
+            --background-color: #f5afe0;
+            --text-color: #333333;
+            --card-background: #ffffff;
+            --header-font: 'Poppins', sans-serif;
+            --body-font: 'Roboto', sans-serif;
+        }
+
+        body {
+            font-family: var(--body-font);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--header-font);
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        #app {
+            min-height: 80vh;
+            padding: 20px;
+        }
+
+        #character-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .character-link {
+            display: block;
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .character-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #character-card {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .card-image {
+            width: 100%;
+            height: auto;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .card-title {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .card-info {
+            margin-bottom: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--body-font);
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #86b846;
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .loading img {
+            width: 80px;
+            height: 80px;
+        }
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+        }
+
+        /* Dark theme */
+        .dark-theme {
+            --background-color: #121212;
+            --text-color: #f5f5f5;
+            --card-background: #1e1e1e;
+            --secondary-color: #4CAF50;
+        }
+
+        /* Media query for mobile */
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 10px;
+            }
+
+            #character-list {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Rick and Morty Characters</h1>
+        <p>Explore the multiverse of Rick and Morty characters</p>
+        <button id="theme-toggle">Toggle Theme</button>
+    </header>
+
+    <div class="container">
+        <div id="app">
+            <div id="character-list"></div>
+            <div id="character-card" style="display: none;"></div>
+            <div id="loading" class="loading" style="display: none;">
+                <img src="/api/placeholder/80/80" alt="Loading..." />
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Created with Rick and Morty API</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <script>
+        // DOM Elements
+        const app = document.getElementById('app');
+        const characterList = document.getElementById('character-list');
+        const characterCard = document.getElementById('character-card');
+        const loadingElement = document.getElementById('loading');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // API Base URL
+        const API_BASE_URL = 'https://rickandmortyapi.com/api';
+
+        // State
+        let characters = [];
+        let currentCharacterIndex = 0;
+
+        // Theme Toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+        });
+
+        // Show loading
+        const showLoading = () => {
+            loadingElement.style.display = 'flex';
+            characterCard.style.display = 'none';
+            characterList.style.display = 'none';
+        };
+
+        // Hide loading
+        const hideLoading = () => {
+            loadingElement.style.display = 'none';
+        };
+
+        // Fetch all characters
+        const fetchCharacters = async () => {
+            showLoading();
+            try {
+                let allCharacters = [];
+                let nextPage = `${API_BASE_URL}/character`;
+                
+                // Fetch first 100 characters (5 pages of 20)
+                for (let i = 0; i < 5 && nextPage; i++) {
+                    const response = await axios.get(nextPage);
+                    allCharacters = [...allCharacters, ...response.data.results];
+                    nextPage = response.data.info.next;
+                }
+                
+                characters = allCharacters.slice(0, 100);
+                displayCharacterList();
+            } catch (error) {
+                console.error('Error fetching characters:', error);
+                characterList.innerHTML = `<p>Error loading characters. Please try again later.</p>`;
+            }
+            hideLoading();
+        };
+
+        // Display list of characters
+        const displayCharacterList = () => {
+            characterCard.style.display = 'none';
+            characterList.style.display = 'grid';
+            
+            characterList.innerHTML = '';
+            characters.forEach((character, index) => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'character-link';
+                link.textContent = character.name;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    displayCharacterCard(index);
+                });
+                characterList.appendChild(link);
+            });
+        };
+
+        // Display character card
+        const displayCharacterCard = async (index) => {
+            showLoading();
+            currentCharacterIndex = index;
+            const character = characters[index];
+            
+            try {
+                // Fetch fresh character data to ensure we have all details
+                const response = await axios.get(`${API_BASE_URL}/character/${character.id}`);
+                const characterData = response.data;
+                
+                characterList.style.display = 'none';
+                characterCard.style.display = 'block';
+                
+                characterCard.innerHTML = `
+                    <img src="${characterData.image}" alt="${characterData.name}" class="card-image">
+                    <div class="card-content">
+                        <h2 class="card-title">${characterData.name}</h2>
+                        <p class="card-info"><strong>ID:</strong> ${characterData.id}</p>
+                        <p class="card-info"><strong>Species:</strong> ${characterData.species}</p>
+                        <p class="card-info"><strong>Status:</strong> ${characterData.status}</p>
+                        <p class="card-info"><strong>Origin:</strong> ${characterData.origin.name}</p>
+                        <div class="button-container">
+                            ${index > 0 ? `<button id="prev-button">Previous</button>` : `<div></div>`}
+                            <button id="back-button">Back to List</button>
+                            ${index < characters.length - 1 ? `<button id="next-button">Next</button>` : `<div></div>`}
+                        </div>
+                    </div>
+                `;
+                
+                // Event listeners for buttons
+                const backButton = document.getElementById('back-button');
+                backButton.addEventListener('click', displayCharacterList);
+                
+                const prevButton = document.getElementById('prev-button');
+                if (prevButton) {
+                    prevButton.addEventListener('click', () => {
+                        displayCharacterCard(index - 1);
+                    });
+                }
+                
+                const nextButton = document.getElementById('next-button');
+                if (nextButton) {
+                    nextButton.addEventListener('click', () => {
+                        displayCharacterCard(index + 1);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching character details:', error);
+                characterCard.innerHTML = `<p>Error loading character details. Please try again later.</p>`;
+            }
+            
+            hideLoading();
+        };
+
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchCharacters();
+        });
+    </script>
+</body>
+</html>
